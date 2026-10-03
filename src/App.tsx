@@ -34,15 +34,36 @@ const schedules = {
 
 const schedule = schedules["CS-2018-2019"];
 
+const CourseCard = ({ course }: { course: { term: string; number: string; meets: string; title: string } }) => (
+  <div className="modern-card">
+    <h2 className="modern-card-header">
+      {course.term} CS {course.number}
+    </h2>
+    <p className="modern-card-title">
+      {course.title}
+    </p>
+
+    <div className="modern-card-footer">
+      <p className="modern-card-meets">
+        {course.meets}
+      </p>
+    </div>
+  </div>
+);
+
 const App = () => (
-  <main>
-    <h1>{schedule.title}</h1>
-    {Object.entries(schedule.courses).map(([id, course]) => (
-      <div key={id}>
-        {course.term} CS {course.number}: {course.title}
+  <div className="modern-app">
+    <main className="modern-main">
+      <h1 className="modern-title">
+        {schedule.title}
+      </h1>
+      <div className="modern-card-grid">
+        {Object.entries(schedule.courses).map(([id, course]) => (
+          <CourseCard key={id} course={course} />
+        ))}
       </div>
-    ))}
-  </main>
+    </main>
+  </div>
 );
 
 export default App;
