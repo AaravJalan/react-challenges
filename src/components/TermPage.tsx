@@ -5,6 +5,15 @@ import { CourseCard } from './CourseCard';
 
 export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const [selectedTerm, setSelectedTerm] = useState('Fall');
+  const [selected, setSelected] = useState<string[]>([]);
+
+  const toggleSelected = (id: string) => {
+    setSelected(prev =>
+      prev.includes(id)
+        ? prev.filter(x => x !== id)
+        : [...prev, id]
+    );
+  };
   
   const filteredCourses = Object.entries(schedule.courses).filter(
     ([, course]) => course.term === selectedTerm
@@ -16,7 +25,13 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
       <div className="modern-card-grid">
         {filteredCourses.length > 0 ? (
           filteredCourses.map(([id, course]) => (
-            <CourseCard key={id} course={course} />
+            <CourseCard
+              key={id}
+              id={id}
+              course={course}
+              selected={selected.includes(id)}
+              toggleSelected={toggleSelected}
+            />
           ))
         ) : (
           <div className="p-8 text-gray-500 font-medium bg-white rounded-xl shadow-sm ring-1 ring-black/5 w-full text-center">
