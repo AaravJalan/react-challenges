@@ -12,7 +12,7 @@ const activeColorMap: Record<string, string> = {
 };
 
 export const TermSelector = ({ term, setTerm }: TermSelectorProps) => (
-  <div className="flex gap-3 mb-8">
+  <div className="flex gap-3">
     {terms.map(t => (
       <button 
         key={t}
