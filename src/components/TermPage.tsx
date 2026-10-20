@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Schedule } from '../types';
 import { TermSelector } from './TermSelector';
 import { CourseCard } from './CourseCard';
 import { Modal } from './Modal';
+import { getConflictingCourse } from '../utilities/timeConflicts';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
 
@@ -24,6 +25,10 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
         : [...prev, id]
     );
   };
+
+  const selectedCourseList = useMemo(() => {
+    return selected.map(selId => schedule.courses[selId]).filter(Boolean);
+  }, [selected, schedule.courses]);
   
   const filteredCourses = Object.entries(schedule.courses).filter(
     ([, course]) => course.term === selectedTerm
@@ -103,15 +108,21 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
 
       <div className="modern-card-grid">
         {filteredCourses.length > 0 ? (
-          filteredCourses.map(([id, course]) => (
-            <CourseCard
-              key={id}
-              id={id}
-              course={course}
-              selected={selected.includes(id)}
-              toggleSelected={toggleSelected}
-            />
-          ))
+          filteredCourses.map(([id, course]) => {
+            const isSelected = selected.includes(id);
+            const conflictCourse = !isSelected ? getConflictingCourse(course, selectedCourseList) : undefined;
+
+            return (
+              <CourseCard
+                key={id}
+                id={id}
+                course={course}
+                selected={isSelected}
+                conflictCourse={conflictCourse}
+                toggleSelected={toggleSelected}
+              />
+            );
+          })
         ) : (
           <div className="p-8 text-gray-500 font-medium bg-white rounded-xl shadow-sm ring-1 ring-black/5 w-full text-center">
             No courses found for {selectedTerm}.
