@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import type { Schedule } from '../types';
+import type { Schedule, Course } from '../types';
 import { TermSelector } from './TermSelector';
 import { CourseCard } from './CourseCard';
 import { Modal } from './Modal';
+import { CourseForm } from './CourseForm';
 import { getConflictingCourse } from '../utilities/timeConflicts';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
@@ -17,6 +18,7 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const [selectedTerm, setSelectedTerm] = useState('Fall');
   const [selected, setSelected] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
   const toggleSelected = (id: string) => {
     setSelected(prev =>
@@ -33,6 +35,15 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const filteredCourses = Object.entries(schedule.courses).filter(
     ([, course]) => course.term === selectedTerm
   );
+
+  if (editingCourse) {
+    return (
+      <CourseForm
+        course={editingCourse}
+        onCancel={() => setEditingCourse(null)}
+      />
+    );
+  }
 
   return (
     <div>
@@ -120,6 +131,7 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
                 selected={isSelected}
                 conflictCourse={conflictCourse}
                 toggleSelected={toggleSelected}
+                onEdit={setEditingCourse}
               />
             );
           })
