@@ -21,9 +21,6 @@ export const useDataQuery = <T = unknown>(path: string): [T | undefined, boolean
   const [error, setError] = useState<Error>();
 
   useEffect(() => {
-    setData(undefined);
-    setLoading(true);
-    setError(undefined);
     return onValue(
       ref(database, path),
       (snapshot) => {

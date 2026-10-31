@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { ref, update } from 'firebase/database';
+import { database } from '../utilities/firebase';
 import type { Course } from '../types';
 import {
   validateTerm,
@@ -8,6 +10,7 @@ import {
 } from '../utilities/courseValidation';
 
 interface CourseFormProps {
+  id: string;
   course: Course;
   onCancel: () => void;
 }
@@ -19,11 +22,13 @@ const termBadgeStyles: Record<string, string> = {
   Summer: 'bg-amber-50 text-amber-700 ring-amber-600/20',
 };
 
-export const CourseForm = ({ course, onCancel }: CourseFormProps) => {
+export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
   const [term, setTerm] = useState(course.term);
   const [number, setNumber] = useState(course.number);
   const [title, setTitle] = useState(course.title);
   const [meets, setMeets] = useState(course.meets);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [errors, setErrors] = useState<{
     term?: string;
@@ -57,8 +62,29 @@ export const CourseForm = ({ course, onCancel }: CourseFormProps) => {
     setErrors(prev => ({ ...prev, meets: validateMeets(val) }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const hasErrors = Object.values(errors).some(Boolean);
+  const hasChanged =
+    term !== course.term ||
+    number !== course.number ||
+    title !== course.title ||
+    meets !== course.meets;
+
+  const canSubmit = !hasErrors && hasChanged;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!canSubmit || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      const updatedCourse: Course = { term, number, title, meets };
+      await update(ref(database, `/courses/${id}`), updatedCourse);
+      onCancel();
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to save changes.');
+      setIsSubmitting(false);
+    }
   };
 
   const badgeStyle = termBadgeStyles[term] || 'bg-gray-50 text-gray-700 ring-gray-600/20';
@@ -219,6 +245,11 @@ export const CourseForm = ({ course, onCancel }: CourseFormProps) => {
           </div>
 
           {/* Form Actions */}
+          {submitError && (
+            <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-600 font-medium">
+              {submitError}
+            </div>
+          )}
           <div className="pt-6 border-t border-gray-100 flex items-center justify-end gap-3">
             <button
               type="button"
@@ -226,6 +257,17 @@ export const CourseForm = ({ course, onCancel }: CourseFormProps) => {
               className="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:shadow-2xs transition-all cursor-pointer"
             >
               Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit || isSubmitting}
+              className={`px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-sm ${
+                canSubmit && !isSubmitting
+                  ? 'bg-blue-600 hover:bg-blue-700 cursor-pointer hover:shadow-md'
+                  : 'bg-gray-300 cursor-not-allowed opacity-60'
+              }`}
+            >
+              {isSubmitting ? 'Saving...' : 'Submit'}
             </button>
           </div>
         </form>

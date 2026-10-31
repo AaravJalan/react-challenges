@@ -18,7 +18,7 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const [selectedTerm, setSelectedTerm] = useState('Fall');
   const [selected, setSelected] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [editingCourse, setEditingCourse] = useState<{ id: string; course: Course } | null>(null);
 
   const toggleSelected = (id: string) => {
     setSelected(prev =>
@@ -39,7 +39,8 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   if (editingCourse) {
     return (
       <CourseForm
-        course={editingCourse}
+        id={editingCourse.id}
+        course={editingCourse.course}
         onCancel={() => setEditingCourse(null)}
       />
     );
@@ -131,7 +132,7 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
                 selected={isSelected}
                 conflictCourse={conflictCourse}
                 toggleSelected={toggleSelected}
-                onEdit={setEditingCourse}
+                onEdit={(courseId, courseObj) => setEditingCourse({ id: courseId, course: courseObj })}
               />
             );
           })

@@ -6,7 +6,7 @@ interface CourseCardProps {
   selected: boolean;
   conflictCourse?: Course;
   toggleSelected: (id: string) => void;
-  onEdit?: (course: Course) => void;
+  onEdit?: (id: string, course: Course) => void;
 }
 
 const termTheme: Record<string, {
@@ -121,7 +121,7 @@ export const CourseCard = ({ id, course, selected, conflictCourse, toggleSelecte
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(course);
+              onEdit(id, course);
             }}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:text-blue-600 hover:ring-blue-300 transition-all shadow-2xs cursor-pointer group/edit"
             aria-label={`Edit ${course.term} CS ${course.number}`}
