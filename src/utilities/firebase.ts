@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, onValue, ref } from 'firebase/database';
+import {
+  getAuth,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  type User,
+} from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAarMVhsPVIxfLw4cqiQWWir-51apbn-FU",
@@ -14,6 +22,39 @@ const firebaseConfig = {
 
 const firebase = initializeApp(firebaseConfig);
 export const database = getDatabase(firebase);
+export const auth = getAuth(firebase);
+
+export const signInWithGoogle = async () => {
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (error) {
+    console.error('Sign-in error:', error);
+    alert(error instanceof Error ? error.message : String(error));
+  }
+};
+
+const firebaseSignOut = () => signOut(auth);
+export { firebaseSignOut as signOut };
+
+export interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isInitialLoading: boolean;
+}
+
+export const useAuthState = (): AuthState => {
+  const [user, setUser] = useState<User | null>(auth.currentUser);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setIsInitialLoading(false);
+    });
+  }, []);
+
+  return { user, isAuthenticated: Boolean(user), isInitialLoading };
+};
 
 export const useDataQuery = <T = unknown>(path: string): [T | undefined, boolean, Error | undefined] => {
   const [data, setData] = useState<T>();

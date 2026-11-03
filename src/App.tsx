@@ -1,5 +1,6 @@
 import { useSchedule } from './hooks/useSchedule';
 import { TermPage } from './components/TermPage';
+import { Banner } from './components/Banner';
 import './App.css';
 
 const App = () => {
@@ -11,6 +12,7 @@ const App = () => {
   return (
     <div className="modern-app">
       <main className="modern-main">
+        <Banner />
         <h1 className="modern-title">
           {schedule.title}
         </h1>

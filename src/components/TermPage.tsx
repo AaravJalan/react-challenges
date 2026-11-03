@@ -5,6 +5,7 @@ import { CourseCard } from './CourseCard';
 import { Modal } from './Modal';
 import { CourseForm } from './CourseForm';
 import { getConflictingCourse } from '../utilities/timeConflicts';
+import { useAuthState } from '../utilities/firebase';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
 
@@ -15,6 +16,7 @@ const termHeaderStyles: Record<string, string> = {
 };
 
 export const TermPage = ({ schedule }: { schedule: Schedule }) => {
+  const { isAuthenticated } = useAuthState();
   const [selectedTerm, setSelectedTerm] = useState('Fall');
   const [selected, setSelected] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -36,7 +38,7 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
     ([, course]) => course.term === selectedTerm
   );
 
-  if (editingCourse) {
+  if (editingCourse && isAuthenticated) {
     return (
       <CourseForm
         id={editingCourse.id}
@@ -133,6 +135,7 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
                 conflictCourse={conflictCourse}
                 toggleSelected={toggleSelected}
                 onEdit={(courseId, courseObj) => setEditingCourse({ id: courseId, course: courseObj })}
+                canEdit={isAuthenticated}
               />
             );
           })

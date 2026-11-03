@@ -22,53 +22,32 @@ const termBadgeStyles: Record<string, string> = {
   Summer: 'bg-amber-50 text-amber-700 ring-amber-600/20',
 };
 
+const validators: Record<keyof Course, (val: string) => string> = {
+  term: validateTerm,
+  number: validateNumber,
+  title: validateTitle,
+  meets: validateMeets,
+};
+
 export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
-  const [term, setTerm] = useState(course.term);
-  const [number, setNumber] = useState(course.number);
-  const [title, setTitle] = useState(course.title);
-  const [meets, setMeets] = useState(course.meets);
+  const [values, setValues] = useState<Course>({ ...course });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [errors, setErrors] = useState<{
-    term?: string;
-    number?: string;
-    title?: string;
-    meets?: string;
-  }>({
+  const [errors, setErrors] = useState<Record<keyof Course, string>>({
     term: validateTerm(course.term),
     number: validateNumber(course.number),
     title: validateTitle(course.title),
     meets: validateMeets(course.meets),
   });
 
-  const handleTermChange = (val: string) => {
-    setTerm(val);
-    setErrors(prev => ({ ...prev, term: validateTerm(val) }));
-  };
-
-  const handleNumberChange = (val: string) => {
-    setNumber(val);
-    setErrors(prev => ({ ...prev, number: validateNumber(val) }));
-  };
-
-  const handleTitleChange = (val: string) => {
-    setTitle(val);
-    setErrors(prev => ({ ...prev, title: validateTitle(val) }));
-  };
-
-  const handleMeetsChange = (val: string) => {
-    setMeets(val);
-    setErrors(prev => ({ ...prev, meets: validateMeets(val) }));
+  const handleChange = (field: keyof Course, val: string) => {
+    setValues(prev => ({ ...prev, [field]: val }));
+    setErrors(prev => ({ ...prev, [field]: validators[field](val) }));
   };
 
   const hasErrors = Object.values(errors).some(Boolean);
-  const hasChanged =
-    term !== course.term ||
-    number !== course.number ||
-    title !== course.title ||
-    meets !== course.meets;
-
+  const hasChanged = (Object.keys(values) as (keyof Course)[]).some(k => values[k] !== course[k]);
   const canSubmit = !hasErrors && hasChanged;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,8 +57,7 @@ export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
     setIsSubmitting(true);
     setSubmitError(null);
     try {
-      const updatedCourse: Course = { term, number, title, meets };
-      await update(ref(database, `/courses/${id}`), updatedCourse);
+      await update(ref(database, `/courses/${id}`), values);
       onCancel();
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Failed to save changes.');
@@ -87,7 +65,7 @@ export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
     }
   };
 
-  const badgeStyle = termBadgeStyles[term] || 'bg-gray-50 text-gray-700 ring-gray-600/20';
+  const badgeStyle = termBadgeStyles[values.term] || 'bg-gray-50 text-gray-700 ring-gray-600/20';
 
   return (
     <div className="max-w-2xl mx-auto py-4">
@@ -107,10 +85,10 @@ export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
         <div className="flex items-start justify-between pb-6 border-b border-gray-100">
           <div>
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 ring-inset mb-2 ${badgeStyle}`}>
-              {term || 'Course'} Quarter
+              {values.term || 'Course'} Quarter
             </span>
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
-              Edit Course CS {number || course.number}
+              Edit Course CS {values.number || course.number}
             </h2>
             <p className="text-sm text-gray-500 mt-1">
               Update course term, number, title, and scheduled meeting times.
@@ -128,8 +106,8 @@ export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
               <div className="relative">
                 <select
                   id="course-term"
-                  value={term}
-                  onChange={(e) => handleTermChange(e.target.value)}
+                  value={values.term}
+                  onChange={(e) => handleChange('term', e.target.value)}
                   className="w-full appearance-none px-4 py-2.5 pr-10 rounded-xl border border-gray-300 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-all shadow-2xs cursor-pointer"
                 >
                   <option value="Fall">Fall</option>
@@ -155,8 +133,8 @@ export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
               <input
                 id="course-number"
                 type="text"
-                value={number}
-                onChange={(e) => handleNumberChange(e.target.value)}
+                value={values.number}
+                onChange={(e) => handleChange('number', e.target.value)}
                 aria-invalid={Boolean(errors.number)}
                 className={`w-full px-4 py-2.5 rounded-xl border text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all shadow-2xs ${
                   errors.number
@@ -188,8 +166,8 @@ export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
             <input
               id="course-title"
               type="text"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
+              value={values.title}
+              onChange={(e) => handleChange('title', e.target.value)}
               aria-invalid={Boolean(errors.title)}
               className={`w-full px-4 py-2.5 rounded-xl border text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all shadow-2xs ${
                 errors.title
@@ -220,8 +198,8 @@ export const CourseForm = ({ id, course, onCancel }: CourseFormProps) => {
             <input
               id="course-meets"
               type="text"
-              value={meets}
-              onChange={(e) => handleMeetsChange(e.target.value)}
+              value={values.meets}
+              onChange={(e) => handleChange('meets', e.target.value)}
               aria-invalid={Boolean(errors.meets)}
               className={`w-full px-4 py-2.5 rounded-xl border text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all shadow-2xs ${
                 errors.meets

@@ -7,6 +7,7 @@ interface CourseCardProps {
   conflictCourse?: Course;
   toggleSelected: (id: string) => void;
   onEdit?: (id: string, course: Course) => void;
+  canEdit?: boolean;
 }
 
 const termTheme: Record<string, {
@@ -42,7 +43,7 @@ const defaultTheme = {
   checkBadge: 'bg-blue-600 text-white',
 };
 
-export const CourseCard = ({ id, course, selected, conflictCourse, toggleSelected, onEdit }: CourseCardProps) => {
+export const CourseCard = ({ id, course, selected, conflictCourse, toggleSelected, onEdit, canEdit }: CourseCardProps) => {
   const theme = termTheme[course.term] || defaultTheme;
   const isConflict = Boolean(conflictCourse && !selected);
 
@@ -116,7 +117,7 @@ export const CourseCard = ({ id, course, selected, conflictCourse, toggleSelecte
         <p className={`inline-flex items-center justify-center rounded-full px-3.5 py-1 text-sm font-semibold ${theme.badge}`}>
           {course.meets}
         </p>
-        {onEdit && (
+        {canEdit && onEdit && (
           <button
             type="button"
             onClick={(e) => {
