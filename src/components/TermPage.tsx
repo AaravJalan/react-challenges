@@ -5,7 +5,9 @@ import { CourseCard } from './CourseCard';
 import { Modal } from './Modal';
 import { CourseForm } from './CourseForm';
 import { CalendarView } from './CalendarView';
+import { SearchBar } from './SearchBar';
 import { getConflictingCourse, parseMeeting } from '../utilities/timeConflicts';
+import { matchCourse } from '../utilities/courseSearch';
 import { useCalendarSchedule } from '../hooks/useCalendarSchedule';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
@@ -18,6 +20,7 @@ const termHeaderStyles: Record<string, string> = {
 
 export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const [selectedTerm, setSelectedTerm] = useState('Fall');
+  const [searchQuery, setSearchQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: string; course: Course } | null>(null);
 
@@ -63,9 +66,12 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
     return currentTermSelected.map(selId => schedule.courses[selId]).filter(Boolean);
   }, [currentTermSelected, schedule.courses]);
 
-  const filteredCourses = Object.entries(schedule.courses).filter(
-    ([, course]) => course.term === selectedTerm
-  );
+  const filteredCourses = useMemo(() => {
+    return Object.entries(schedule.courses).filter(([, course]) => {
+      if (course.term !== selectedTerm) return false;
+      return matchCourse(course, searchQuery);
+    });
+  }, [schedule.courses, selectedTerm, searchQuery]);
 
   if (editingCourse && isAdmin) {
     return (
@@ -80,22 +86,32 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   return (
     <div>
       {/* Top Header controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <TermSelector term={selectedTerm} setTerm={setSelectedTerm} />
-        <button
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:shadow-2xs transition-all duration-200 cursor-pointer text-sm"
-        >
-          <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span>Course Plan</span>
-          {totalSelectedCount > 0 && (
-            <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-blue-600 text-white rounded-full">
-              {totalSelectedCount}
-            </span>
-          )}
-        </button>
+      <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-4 mb-6">
+        <div className="flex justify-start">
+          <TermSelector term={selectedTerm} setTerm={setSelectedTerm} />
+        </div>
+
+        {/* Search input in middle */}
+        <div className="flex justify-center w-full">
+          <SearchBar value={searchQuery} onChange={setSearchQuery} />
+        </div>
+
+        <div className="flex justify-end">
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:shadow-2xs transition-all duration-200 cursor-pointer text-sm"
+          >
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Course Plan</span>
+            {totalSelectedCount > 0 && (
+              <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-blue-600 text-white rounded-full">
+                {totalSelectedCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Course Plan Modal */}
@@ -201,7 +217,25 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
               })
             ) : (
               <div className="col-span-full p-8 text-gray-500 font-medium bg-white rounded-xl shadow-xs border border-gray-100 w-full text-center text-sm">
-                No courses found for {selectedTerm}.
+                {searchQuery ? (
+                  <div>
+                    <p className="font-semibold text-gray-800 mb-1">
+                      No courses found matching &quot;{searchQuery}&quot;
+                    </p>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Try searching by course title, number (e.g. 111), or meeting days (e.g. MWF).
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer"
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                ) : (
+                  `No courses found for ${selectedTerm}.`
+                )}
               </div>
             )}
           </div>
