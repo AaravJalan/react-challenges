@@ -1,0 +1,1 @@
+Replace starter code in src/App.tsx with a page showing the title of a hard-coded course schedule (Firestore-style JSON) followed by a list of courses (each on its own line). For each course, it should display the course name, course code, and quarter of offering. Use Object.entries() and .map() to loop over the courses object and display each course.

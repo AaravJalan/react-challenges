@@ -1,0 +1,1 @@
+Add form submission to CourseForm so modified course data is saved to Firebase Realtime Database at /courses/${id} when clicking Submit. The form must prevent submission if any fields have validation errors or if no values were changed, and return to the main course view on success.

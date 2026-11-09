@@ -1,0 +1,1 @@
+Add user authentication so only signed-in users can edit courses. Display a banner with a Sign In / Out button using Google auth, only show the course edit button on course cards when authenticated, and restrict database write rules to authenticated users.

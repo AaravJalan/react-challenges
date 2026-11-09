@@ -1,0 +1,1 @@
+Create an interactive M-F weekly calendar. Clicking a course adds it to the calendar at its meeting times with distinct colors. Calendar displays hour labels, prevents time conflicts, keeps separate schedules across terms, and persists selections for signed-in users.

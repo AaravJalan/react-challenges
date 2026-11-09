@@ -1,0 +1,1 @@
+Replace the static fetch() in "useSchedule.ts" with live data queried from Firebase Realtime Database. The application should load courses seamlessly via a reusable "useDataQuery" hook in "src/utilities/firebase.ts" while preserving the existing "{ schedule, isLoading, error }" signature, with no visual or behavioral changes to the UI.

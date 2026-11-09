@@ -1,0 +1,1 @@
+Restrict course editing so only authenticated users who are administrators can edit courses. Query /admins database path to check if signed-in user is an admin, show course edit buttons only to administrators, enforce admin-only write rules in database.rules.json.

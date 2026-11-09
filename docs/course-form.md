@@ -1,0 +1,1 @@
+Add an edit form component with text input fields for a course’s title and meeting times, populated with that course's current data. Add an Edit button on each course card that navigates to the edit form. Add a Cancel button that returns the user to the course list, but no Submit button. The form should have an onSubmit() handler that does nothing.

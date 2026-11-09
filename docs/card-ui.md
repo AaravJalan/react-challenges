@@ -1,0 +1,1 @@
+Use Tailwind CSS styling to create a modern, card UI for each course. The UI should be responsive, and each row should expand to screen width. Cards on the same row should be uniform in height and internal spacing, and there may be multiple rows depending on the number of cards.

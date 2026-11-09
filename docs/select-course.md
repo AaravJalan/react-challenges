@@ -1,0 +1,1 @@
+Change the UI so clicking on a course card selects it. If the course is already selected, clicking unselects it. Selected classes should be highlighted visually (changing background color and outline) so users can distinguish selected courses from unselected ones.
