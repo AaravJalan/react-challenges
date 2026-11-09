@@ -4,8 +4,9 @@ import { TermSelector } from './TermSelector';
 import { CourseCard } from './CourseCard';
 import { Modal } from './Modal';
 import { CourseForm } from './CourseForm';
-import { getConflictingCourse } from '../utilities/timeConflicts';
-import { useProfile } from '../utilities/profile';
+import { CalendarView } from './CalendarView';
+import { getConflictingCourse, parseMeeting } from '../utilities/timeConflicts';
+import { useCalendarSchedule } from '../hooks/useCalendarSchedule';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
 
@@ -16,24 +17,52 @@ const termHeaderStyles: Record<string, string> = {
 };
 
 export const TermPage = ({ schedule }: { schedule: Schedule }) => {
-  const [{ isAdmin }] = useProfile();
   const [selectedTerm, setSelectedTerm] = useState('Fall');
-  const [selected, setSelected] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: string; course: Course } | null>(null);
 
-  const toggleSelected = (id: string) => {
-    setSelected(prev =>
-      prev.includes(id)
-        ? prev.filter(x => x !== id)
-        : [...prev, id]
-    );
-  };
+  const {
+    user,
+    isAdmin,
+    activeSchedules,
+    currentTermSelected,
+    toggleCourse,
+    clearTerm,
+    totalSelectedCount,
+  } = useCalendarSchedule(selectedTerm);
+
+  const calendarCourses = useMemo(() => {
+    return currentTermSelected
+      .map(id => ({ id, course: schedule.courses[id] }))
+      .filter((item): item is { id: string; course: Course } => Boolean(item.course));
+  }, [currentTermSelected, schedule.courses]);
+
+  // Dynamic hours: default to daytime 9 AM - 5 PM, and only expand to 6 PM, 8 PM, or 9 PM
+  // if an enrolled course actually extends that late!
+  const { startHour, endHour } = useMemo(() => {
+    let minH = 9;
+    let maxH = 17; // standard 5 PM
+
+    for (const { course } of calendarCourses) {
+      const p = parseMeeting(course.meets);
+      if (p) {
+        const sh = Math.floor(p.start / 60);
+        const eh = Math.ceil(p.end / 60);
+        if (sh < minH) minH = sh;
+        if (eh > maxH) maxH = eh;
+      }
+    }
+
+    return {
+      startHour: minH,
+      endHour: maxH,
+    };
+  }, [calendarCourses]);
 
   const selectedCourseList = useMemo(() => {
-    return selected.map(selId => schedule.courses[selId]).filter(Boolean);
-  }, [selected, schedule.courses]);
-  
+    return currentTermSelected.map(selId => schedule.courses[selId]).filter(Boolean);
+  }, [currentTermSelected, schedule.courses]);
+
   const filteredCourses = Object.entries(schedule.courses).filter(
     ([, course]) => course.term === selectedTerm
   );
@@ -50,26 +79,41 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+      {/* Top Header controls */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <TermSelector term={selectedTerm} setTerm={setSelectedTerm} />
         <button
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:shadow-sm transition-all duration-200 cursor-pointer shadow-xs"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:shadow-2xs transition-all duration-200 cursor-pointer text-sm"
         >
-          <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <span>Course Plan</span>
-          {selected.length > 0 && (
+          {totalSelectedCount > 0 && (
             <span className="ml-1 px-2 py-0.5 text-xs font-bold bg-blue-600 text-white rounded-full">
-              {selected.length}
+              {totalSelectedCount}
             </span>
           )}
         </button>
       </div>
 
+      {/* Course Plan Modal */}
       <Modal open={open} close={() => setOpen(false)} title="Course Plan">
-        {selected.length === 0 ? (
+        {/* On mobile screens (< lg): display interactive weekly calendar view right at the top */}
+        <div className="block lg:hidden mb-6">
+          <CalendarView
+            term={selectedTerm}
+            courses={calendarCourses}
+            startHour={startHour}
+            endHour={endHour}
+            onToggleCourse={toggleCourse}
+            onClear={clearTerm}
+            isLoggedIn={Boolean(user)}
+          />
+        </div>
+
+        {totalSelectedCount === 0 ? (
           <div className="text-center py-6 px-2">
             <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 mx-auto flex items-center justify-center mb-3">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -84,9 +128,10 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
         ) : (
           <div className="space-y-6">
             {terms.map(t => {
-              const coursesInTerm = selected
+              const termIds = activeSchedules[t] || [];
+              const coursesInTerm = termIds
                 .map(id => ({ id, ...schedule.courses[id] }))
-                .filter(c => c.term === t);
+                .filter(c => Boolean(c.title));
 
               if (coursesInTerm.length === 0) return null;
 
@@ -120,30 +165,60 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
         )}
       </Modal>
 
-      <div className="modern-card-grid">
-        {filteredCourses.length > 0 ? (
-          filteredCourses.map(([id, course]) => {
-            const isSelected = selected.includes(id);
-            const conflictCourse = !isSelected ? getConflictingCourse(course, selectedCourseList) : undefined;
-
-            return (
-              <CourseCard
-                key={id}
-                id={id}
-                course={course}
-                selected={isSelected}
-                conflictCourse={conflictCourse}
-                toggleSelected={toggleSelected}
-                onEdit={(courseId, courseObj) => setEditingCourse({ id: courseId, course: courseObj })}
-                canEdit={isAdmin}
-              />
-            );
-          })
-        ) : (
-          <div className="p-8 text-gray-500 font-medium bg-white rounded-xl shadow-sm ring-1 ring-black/5 w-full text-center">
-            No courses found for {selectedTerm}.
+      {/* Main Layout: Courses on Left (6 Columns), Calendar on Right on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-7 items-start">
+        {/* Left: Courses (6 cols = 50% width, 3 relaxed cards in each row) */}
+        <div className="lg:col-span-6 xl:col-span-6 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-bold text-gray-900">
+              {selectedTerm} Courses ({filteredCourses.length})
+            </h2>
+            <span className="text-xs text-gray-500">
+              Select courses to place on weekly calendar
+            </span>
           </div>
-        )}
+
+          {/* 3 columns of relaxed cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 p-1 max-h-[780px] overflow-y-auto pr-1">
+            {filteredCourses.length > 0 ? (
+              filteredCourses.map(([id, course]) => {
+                const isSelected = currentTermSelected.includes(id);
+                const conflictCourse = !isSelected ? getConflictingCourse(course, selectedCourseList) : undefined;
+
+                return (
+                  <div key={id} className="w-full">
+                    <CourseCard
+                      id={id}
+                      course={course}
+                      selected={isSelected}
+                      conflictCourse={conflictCourse}
+                      toggleSelected={toggleCourse}
+                      onEdit={(courseId, courseObj) => setEditingCourse({ id: courseId, course: courseObj })}
+                      canEdit={isAdmin}
+                    />
+                  </div>
+                );
+              })
+            ) : (
+              <div className="col-span-full p-8 text-gray-500 font-medium bg-white rounded-xl shadow-xs border border-gray-100 w-full text-center text-sm">
+                No courses found for {selectedTerm}.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Expanded weekly calendar on desktop (hidden on mobile, opened via Course Plan button) */}
+        <div className="hidden lg:block lg:col-span-6 xl:col-span-6 lg:sticky lg:top-4">
+          <CalendarView
+            term={selectedTerm}
+            courses={calendarCourses}
+            startHour={startHour}
+            endHour={endHour}
+            onToggleCourse={toggleCourse}
+            onClear={clearTerm}
+            isLoggedIn={Boolean(user)}
+          />
+        </div>
       </div>
     </div>
   );

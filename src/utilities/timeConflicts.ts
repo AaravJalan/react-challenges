@@ -6,9 +6,14 @@ export interface ParsedMeeting {
   end: number;
 }
 
-const toMinutes = (timeStr: string): number => {
+const toMinutes = (timeStr: string, startM = 0): number => {
   const [h, m] = timeStr.split(':').map(Number);
-  return h * 60 + m;
+  const hour24 = h < 8 ? h + 12 : h;
+  let mins = hour24 * 60 + m;
+  if (mins < startM && h <= 11) {
+    mins += 12 * 60;
+  }
+  return mins;
 };
 
 // Single-pass regex parser handling whitespace and token validation
@@ -19,11 +24,13 @@ export const parseMeeting = (meets: string): ParsedMeeting | null => {
 
   const [, daysStr, startStr, endStr] = match;
   const days = daysStr.match(/Tu|Th|Sa|Su|M|W|F/g) || [];
+  const start = toMinutes(startStr);
+  const end = toMinutes(endStr, start);
 
   return {
     days,
-    start: toMinutes(startStr),
-    end: toMinutes(endStr),
+    start,
+    end,
   };
 };
 
