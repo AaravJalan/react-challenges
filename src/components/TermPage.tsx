@@ -6,8 +6,10 @@ import { Modal } from './Modal';
 import { CourseForm } from './CourseForm';
 import { CalendarView } from './CalendarView';
 import { SearchBar } from './SearchBar';
+import { FilterBar } from './FilterBar';
 import { getConflictingCourse, parseMeeting } from '../utilities/timeConflicts';
 import { matchCourse } from '../utilities/courseSearch';
+import { filterCourse, INITIAL_FILTERS, type FilterState } from '../utilities/courseFilters';
 import { useCalendarSchedule } from '../hooks/useCalendarSchedule';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
@@ -21,6 +23,7 @@ const termHeaderStyles: Record<string, string> = {
 export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const [selectedTerm, setSelectedTerm] = useState('Fall');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
   const [open, setOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: string; course: Course } | null>(null);
 
@@ -66,12 +69,28 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
     return currentTermSelected.map(selId => schedule.courses[selId]).filter(Boolean);
   }, [currentTermSelected, schedule.courses]);
 
+  const handleFilterChange = <K extends keyof FilterState>(key: K, value: FilterState[K]) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const isFilterActive =
+    filters.level !== 'All' ||
+    filters.day !== 'All' ||
+    filters.time !== 'All' ||
+    Boolean(searchQuery);
+
+  const resetAllFilters = () => {
+    setFilters(INITIAL_FILTERS);
+    setSearchQuery('');
+  };
+
   const filteredCourses = useMemo(() => {
     return Object.entries(schedule.courses).filter(([, course]) => {
       if (course.term !== selectedTerm) return false;
-      return matchCourse(course, searchQuery);
+      if (!matchCourse(course, searchQuery)) return false;
+      return filterCourse(course, filters);
     });
-  }, [schedule.courses, selectedTerm, searchQuery]);
+  }, [schedule.courses, selectedTerm, searchQuery, filters]);
 
   if (editingCourse && isAdmin) {
     return (
@@ -91,9 +110,17 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
           <TermSelector term={selectedTerm} setTerm={setSelectedTerm} />
         </div>
 
-        {/* Search input in middle */}
-        <div className="flex justify-center w-full">
-          <SearchBar value={searchQuery} onChange={setSearchQuery} />
+        {/* Search input and compact filter button in middle */}
+        <div className="flex items-center justify-center gap-2 w-full max-w-sm mx-auto">
+          <div className="flex-1 min-w-0">
+            <SearchBar value={searchQuery} onChange={setSearchQuery} />
+          </div>
+          <FilterBar
+            filters={filters}
+            onChange={handleFilterChange}
+            onReset={resetAllFilters}
+            isActive={isFilterActive}
+          />
         </div>
 
         <div className="flex justify-end">
@@ -217,20 +244,20 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
               })
             ) : (
               <div className="col-span-full p-8 text-gray-500 font-medium bg-white rounded-xl shadow-xs border border-gray-100 w-full text-center text-sm">
-                {searchQuery ? (
+                {isFilterActive ? (
                   <div>
                     <p className="font-semibold text-gray-800 mb-1">
-                      No courses found matching &quot;{searchQuery}&quot;
+                      No courses match your active search or filters
                     </p>
                     <p className="text-xs text-gray-500 mb-3">
-                      Try searching by course title, number (e.g. 111), or meeting days (e.g. MWF).
+                      Try broadening your search term or selecting &quot;All&quot; for level, days, or time.
                     </p>
                     <button
                       type="button"
-                      onClick={() => setSearchQuery('')}
+                      onClick={resetAllFilters}
                       className="text-xs font-semibold text-blue-600 hover:text-blue-700 underline cursor-pointer"
                     >
-                      Clear search
+                      Reset all filters
                     </button>
                   </div>
                 ) : (
