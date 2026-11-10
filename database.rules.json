@@ -1,7 +1,17 @@
 {
   "rules": {
-    ".read": true,
-    ".write": "auth !== null && root.child('admins').child(auth.uid).val() === true",
+    "title": {
+      ".read": true,
+      ".write": "auth !== null && root.child('admins').child(auth.uid).val() === true"
+    },
+    "courses": {
+      ".read": true,
+      ".write": "auth !== null && root.child('admins').child(auth.uid).val() === true"
+    },
+    "admins": {
+      ".read": true,
+      ".write": false
+    },
     "users": {
       "$uid": {
         ".read": "auth !== null && auth.uid === $uid",
@@ -10,3 +20,4 @@
     }
   }
 }
+

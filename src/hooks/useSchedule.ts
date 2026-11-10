@@ -1,12 +1,17 @@
 import { useDataQuery } from '../utilities/firebase';
-import type { Schedule } from '../types';
+import type { Schedule, Course } from '../types';
 
 export const useSchedule = () => {
-  const [schedule, isLoading, error] = useDataQuery<Schedule>('/');
+  const [title, titleLoading, titleError] = useDataQuery<string>('/title');
+  const [courses, coursesLoading, coursesError] = useDataQuery<Record<string, Course>>('/courses');
+
+  const schedule: Schedule | null = title && courses ? { title, courses } : null;
+  const isLoading = titleLoading || coursesLoading;
+  const error = titleError || coursesError || null;
 
   return {
-    schedule: schedule ?? null,
+    schedule,
     isLoading,
-    error: error ?? null,
+    error,
   };
 };
