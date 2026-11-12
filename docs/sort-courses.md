@@ -1,0 +1,1 @@
+Add a sort dropdown next to the course listing header that lets students reorder courses by course number, title (A-Z), or start time, in both directions. The sort applies on top of the active term, search, and filter selections and updates the displayed card order.

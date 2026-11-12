@@ -7,9 +7,11 @@ import { CourseForm } from './CourseForm';
 import { CalendarView } from './CalendarView';
 import { SearchBar } from './SearchBar';
 import { FilterBar } from './FilterBar';
+import { SortControl } from './SortControl';
 import { getConflictingCourse, parseMeeting } from '../utilities/timeConflicts';
 import { matchCourse } from '../utilities/courseSearch';
 import { filterCourse, INITIAL_FILTERS, type FilterState } from '../utilities/courseFilters';
+import { compareCourses, type SortKey, type SortDirection } from '../utilities/courseSorting';
 import { useCalendarSchedule } from '../hooks/useCalendarSchedule';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
@@ -24,6 +26,8 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const [selectedTerm, setSelectedTerm] = useState('Fall');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [sortBy, setSortBy] = useState<SortKey>('number');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [open, setOpen] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: string; course: Course } | null>(null);
 
@@ -85,12 +89,16 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   };
 
   const filteredCourses = useMemo(() => {
-    return Object.entries(schedule.courses).filter(([, course]) => {
+    const matched = Object.entries(schedule.courses).filter(([, course]) => {
       if (course.term !== selectedTerm) return false;
       if (!matchCourse(course, searchQuery)) return false;
       return filterCourse(course, filters);
     });
-  }, [schedule.courses, selectedTerm, searchQuery, filters]);
+
+    matched.sort(([, a], [, b]) => compareCourses(a, b, sortBy, sortDirection));
+
+    return matched;
+  }, [schedule.courses, selectedTerm, searchQuery, filters, sortBy, sortDirection]);
 
   if (editingCourse && isAdmin) {
     return (
@@ -216,9 +224,12 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
             <h2 className="text-base font-bold text-gray-900">
               {selectedTerm} Courses ({filteredCourses.length})
             </h2>
-            <span className="text-xs text-gray-500">
-              Select courses to place on weekly calendar
-            </span>
+            <SortControl
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSortByChange={setSortBy}
+              onToggleDirection={() => setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'))}
+            />
           </div>
 
           {/* 3 columns of relaxed cards */}
