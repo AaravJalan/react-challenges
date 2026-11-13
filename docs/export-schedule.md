@@ -1,0 +1,1 @@
+Add an export dropdown button allowing students to export their selected courses for the active term. Provide 2 options: download a .ics calendar file or export to Google Calendar. If no courses are selected in the current term, display an alert.

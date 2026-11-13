@@ -8,10 +8,12 @@ import { CalendarView } from './CalendarView';
 import { SearchBar } from './SearchBar';
 import { FilterBar } from './FilterBar';
 import { SortControl } from './SortControl';
+import { ExportModal } from './ExportModal';
 import { getConflictingCourse, parseMeeting } from '../utilities/timeConflicts';
 import { matchCourse } from '../utilities/courseSearch';
 import { filterCourse, INITIAL_FILTERS, type FilterState } from '../utilities/courseFilters';
 import { compareCourses, type SortKey, type SortDirection } from '../utilities/courseSorting';
+import { downloadICSFile } from '../utilities/scheduleExport';
 import { useCalendarSchedule } from '../hooks/useCalendarSchedule';
 
 const terms = ['Fall', 'Winter', 'Spring'] as const;
@@ -29,6 +31,8 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
   const [sortBy, setSortBy] = useState<SortKey>('number');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [open, setOpen] = useState(false);
+  const [showExport, setShowExport] = useState(false);
+  const [showGCalModal, setShowGCalModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<{ id: string; course: Course } | null>(null);
 
   const {
@@ -46,6 +50,22 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
       .map(id => ({ id, course: schedule.courses[id] }))
       .filter((item): item is { id: string; course: Course } => Boolean(item.course));
   }, [currentTermSelected, schedule.courses]);
+
+  const exportICS = () => {
+    if (calendarCourses.length === 0) {
+      alert(`No courses selected for ${selectedTerm} term to export.`);
+      return;
+    }
+    downloadICSFile(calendarCourses, selectedTerm);
+  };
+
+  const exportGCal = () => {
+    if (calendarCourses.length === 0) {
+      alert(`No courses selected for ${selectedTerm} term to export.`);
+      return;
+    }
+    setShowGCalModal(true);
+  };
 
   // Dynamic hours: default to daytime 9 AM - 5 PM, and only expand to 6 PM, 8 PM, or 9 PM
   // if an enrolled course actually extends that late!
@@ -131,7 +151,53 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
           />
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end items-center gap-2">
+          {/* Export schedule for currently selected term */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExport(prev => !prev)}
+              aria-label={`Export ${selectedTerm} schedule`}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl font-semibold text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:shadow-2xs transition-all duration-200 cursor-pointer text-sm"
+            >
+              <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span>Export</span>
+            </button>
+
+            {showExport && (
+              <div className="absolute right-0 mt-1.5 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-1 z-30 text-xs animate-in fade-in zoom-in-95 duration-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportICS();
+                    setShowExport(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer font-medium text-gray-700"
+                >
+                  <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span>Download .ics</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    exportGCal();
+                    setShowExport(false);
+                  }}
+                  className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2 cursor-pointer font-medium text-gray-700"
+                >
+                  <svg className="w-4 h-4 text-gray-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  <span>Google Calendar</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => setOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-xl font-semibold text-gray-700 bg-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:shadow-2xs transition-all duration-200 cursor-pointer text-sm"
@@ -292,6 +358,14 @@ export const TermPage = ({ schedule }: { schedule: Schedule }) => {
           />
         </div>
       </div>
+
+      {/* Export to Google Calendar Modal */}
+      <ExportModal
+        open={showGCalModal}
+        onClose={() => setShowGCalModal(false)}
+        term={selectedTerm}
+        courses={calendarCourses}
+      />
     </div>
   );
 };
